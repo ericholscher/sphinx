@@ -772,19 +772,11 @@ class BuildEnvironment:
         codecs.register_error('sphinx', self.warn_and_replace)
 
         # publish manually
-        src_path = self.doc2path(docname, suffix='.md')
-        reader  = SphinxStandaloneReader()
-        if path.isfile(src_path):
-
+        src_path = self.doc2path(docname)
+        if src_path.endswith('.md'):
             publisher_class = MarkdownPublisher
-            self.config.old_source_suffix = self.config.source_suffix
-            self.config.source_suffix = '.md'
         else:
-            # Default source_suffix
             publisher_class = Publisher
-            if hasattr(self.config, 'old_source_suffix'):
-                self.config.source_suffix = self.config.old_source_suffix or self.config.source_suffix
-            src_path = self.doc2path(docname)
         pub = publisher_class(reader=SphinxStandaloneReader(),
                         writer=SphinxDummyWriter(),
                         destination_class=NullOutput)
