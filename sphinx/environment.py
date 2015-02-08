@@ -101,8 +101,7 @@ class MarkdownPublisher(Publisher):
         Publisher.__init__(self, *args, **kwargs)
  
         # replace parser FORCELY
-        from remarkdown.parser import MarkdownParser
-        self.reader.parser = MarkdownParser()
+        self.reader.parser = CommonMarkParser()
  
     def publish(self):
         Publisher.publish(self)
