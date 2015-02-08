@@ -52,6 +52,7 @@ from sphinx.transforms import DefaultSubstitutions, MoveModuleTargets, \
     HandleCodeBlocks, AutoNumbering, SortIds, CitationReferences, Locale, \
     RemoveTranslatableInline, SphinxContentsFilter
 
+from recommonmark.parser import CommonMarkParser
 
 orig_role_function = roles.role
 orig_directive_function = directives.directive
@@ -93,6 +94,26 @@ class NoUri(Exception):
     """Raised by get_relative_uri if there is no URI available."""
     pass
 
+
+
+class MarkdownPublisher(Publisher):
+    def __init__(self, *args, **kwargs):
+        Publisher.__init__(self, *args, **kwargs)
+ 
+        # replace parser FORCELY
+        from remarkdown.parser import MarkdownParser
+        self.reader.parser = MarkdownParser()
+ 
+    def publish(self):
+        Publisher.publish(self)
+ 
+        # set names and ids attribute to section node
+        from docutils import nodes
+        for section in self.document.traverse(nodes.section):
+            titlenode = section[0]
+            name = nodes.fully_normalize_name(titlenode.astext())
+            section['names'].append(name)
+            self.document.note_implicit_target(section, section)
 
 class SphinxStandaloneReader(standalone.Reader):
     """
@@ -754,26 +775,7 @@ class BuildEnvironment:
         src_path = self.doc2path(docname, suffix='.md')
         reader  = SphinxStandaloneReader()
         if path.isfile(src_path):
-            from recommonmark.parser import CommonMarkParser
 
-            class MarkdownPublisher(Publisher):
-                def __init__(self, *args, **kwargs):
-                    Publisher.__init__(self, *args, **kwargs)
-             
-                    # replace parser FORCELY
-                    from remarkdown.parser import MarkdownParser
-                    self.reader.parser = MarkdownParser()
-             
-                def publish(self):
-                    Publisher.publish(self)
-             
-                    # set names and ids attribute to section node
-                    from docutils import nodes
-                    for section in self.document.traverse(nodes.section):
-                        titlenode = section[0]
-                        name = nodes.fully_normalize_name(titlenode.astext())
-                        section['names'].append(name)
-                        self.document.note_implicit_target(section, section)
             publisher_class = MarkdownPublisher
             self.config.old_source_suffix = self.config.source_suffix
             self.config.source_suffix = '.md'
