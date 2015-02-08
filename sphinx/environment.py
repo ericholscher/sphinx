@@ -26,7 +26,7 @@ from itertools import groupby
 from six import iteritems, itervalues, text_type, class_types, string_types
 from six.moves import cPickle as pickle, zip
 from docutils import nodes
-from docutils.io import FileInput, NullOutput
+from docutils.io import FileInput, NullOutput, StringInput
 from docutils.core import Publisher
 from docutils.utils import Reporter, relative_path, get_source_line
 from docutils.readers import standalone
@@ -97,11 +97,13 @@ class NoUri(Exception):
 
 
 class MarkdownPublisher(Publisher):
+
     def __init__(self, *args, **kwargs):
+        env = kwargs.pop('env')
         Publisher.__init__(self, *args, **kwargs)
  
         # replace parser FORCELY
-        self.reader.parser = CommonMarkParser()
+        self.reader.parser = CommonMarkParser(env=env)
  
     def publish(self):
         Publisher.publish(self)
@@ -113,6 +115,7 @@ class MarkdownPublisher(Publisher):
             name = nodes.fully_normalize_name(titlenode.astext())
             section['names'].append(name)
             self.document.note_implicit_target(section, section)
+
 
 class SphinxStandaloneReader(standalone.Reader):
     """
@@ -778,12 +781,14 @@ class BuildEnvironment:
         # publish manually
         src_path = self.doc2path(docname)
         if src_path.endswith('.md'):
-            publisher_class = MarkdownPublisher
+            pub = MarkdownPublisher(reader=SphinxStandaloneReader(),
+                            writer=SphinxDummyWriter(),
+                            destination_class=NullOutput,
+                            env=self)
         else:
-            publisher_class = Publisher
-        pub = publisher_class(reader=SphinxStandaloneReader(),
-                        writer=SphinxDummyWriter(),
-                        destination_class=NullOutput)
+            pub = Publisher(reader=SphinxStandaloneReader(),
+                            writer=SphinxDummyWriter(),
+                            destination_class=NullOutput)
         pub.set_components(None, 'restructuredtext', None)
         pub.process_programmatic_settings(None, self.settings, None)
         source = SphinxFileInput(app, self, source=None, source_path=src_path,
@@ -1988,3 +1993,16 @@ class BuildEnvironment:
                 if 'orphan' in self.metadata[docname]:
                     continue
                 self.warn(docname, 'document isn\'t included in any toctree')
+
+    def node_from_directive(self, directive_string):
+        pub = Publisher(reader=SphinxStandaloneReader(),
+                        writer=SphinxDummyWriter(),
+                        destination_class=NullOutput)
+        pub.set_components(None, 'restructuredtext', None)
+        pub.process_programmatic_settings(None, self.settings, None)
+        source = StringInput(source=directive_string, encoding=self.config.source_encoding)
+        pub.source = source
+        pub.set_destination(None, None)
+        pub.publish()
+        doctree = pub.document
+        return doctree
