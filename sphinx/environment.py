@@ -391,11 +391,15 @@ class BuildEnvironment:
         docname = docname.replace(SEP, path.sep)
         suffix = suffix or self.config.source_suffix
         if base is True:
-            return path.join(self.srcdir, docname) + suffix
+            ret = path.join(self.srcdir, docname) + suffix
         elif base is None:
-            return docname + suffix
+            ret = docname + suffix
         else:
-            return path.join(base, docname) + suffix
+            ret = path.join(base, docname) + suffix
+        if not path.isfile(ret) and suffix != '.md':
+            ret = self.doc2path(docname=docname, base=base, suffix='.md')
+        return ret
+
 
     def relfn2path(self, filename, docname=None):
         """Return paths to a file referenced from a document, relative to
@@ -433,6 +437,9 @@ class BuildEnvironment:
         )
         self.found_docs = set(get_matching_docs(
             self.srcdir, config.source_suffix, exclude_matchers=matchers))
+        md_docs = set(get_matching_docs(
+            self.srcdir, '.md', exclude_matchers=matchers))
+        self.found_docs.update(md_docs)
 
         # add catalog mo file dependency
         for docname in self.found_docs:
@@ -744,12 +751,43 @@ class BuildEnvironment:
         codecs.register_error('sphinx', self.warn_and_replace)
 
         # publish manually
-        pub = Publisher(reader=SphinxStandaloneReader(),
+        src_path = self.doc2path(docname, suffix='.md')
+        reader  = SphinxStandaloneReader()
+        if path.isfile(src_path):
+            from recommonmark.parser import CommonMarkParser
+
+            class MarkdownPublisher(Publisher):
+                def __init__(self, *args, **kwargs):
+                    Publisher.__init__(self, *args, **kwargs)
+             
+                    # replace parser FORCELY
+                    from remarkdown.parser import MarkdownParser
+                    self.reader.parser = MarkdownParser()
+             
+                def publish(self):
+                    Publisher.publish(self)
+             
+                    # set names and ids attribute to section node
+                    from docutils import nodes
+                    for section in self.document.traverse(nodes.section):
+                        titlenode = section[0]
+                        name = nodes.fully_normalize_name(titlenode.astext())
+                        section['names'].append(name)
+                        self.document.note_implicit_target(section, section)
+            publisher_class = MarkdownPublisher
+            self.config.old_source_suffix = self.config.source_suffix
+            self.config.source_suffix = '.md'
+        else:
+            # Default source_suffix
+            publisher_class = Publisher
+            if hasattr(self.config, 'old_source_suffix'):
+                self.config.source_suffix = self.config.old_source_suffix or self.config.source_suffix
+            src_path = self.doc2path(docname)
+        pub = publisher_class(reader=SphinxStandaloneReader(),
                         writer=SphinxDummyWriter(),
                         destination_class=NullOutput)
         pub.set_components(None, 'restructuredtext', None)
         pub.process_programmatic_settings(None, self.settings, None)
-        src_path = self.doc2path(docname)
         source = SphinxFileInput(app, self, source=None, source_path=src_path,
                                  encoding=self.config.source_encoding)
         pub.source = source
