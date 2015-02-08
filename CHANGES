@@ -17,6 +17,8 @@ Features added
   enums are injected into the parent scope in addition to the enum scope.
 * Add ``todo_include_todos`` config option to quickstart conf file, handled as
   described in documentation.
+* The :confval:`source_suffix` config value can now be a list of multiple
+  suffixes.
 
 Bugs fixed
 ----------
