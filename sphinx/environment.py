@@ -389,16 +389,16 @@ class BuildEnvironment:
         If *suffix* is not None, add it instead of config.source_suffix.
         """
         docname = docname.replace(SEP, path.sep)
-        suffix = suffix or self.config.source_suffix
-        if base is True:
-            ret = path.join(self.srcdir, docname) + suffix
-        elif base is None:
-            ret = docname + suffix
+        if 'md_docs' in self.__dict__ and docname in self.md_docs:
+            suffix = '.md'
         else:
-            ret = path.join(base, docname) + suffix
-        if not path.isfile(ret) and suffix != '.md':
-            ret = self.doc2path(docname=docname, base=base, suffix='.md')
-        return ret
+            suffix = suffix or self.config.source_suffix
+        if base is True:
+            return path.join(self.srcdir, docname) + suffix
+        elif base is None:
+            return docname + suffix
+        else:
+            return path.join(base, docname) + suffix
 
 
     def relfn2path(self, filename, docname=None):
@@ -437,9 +437,9 @@ class BuildEnvironment:
         )
         self.found_docs = set(get_matching_docs(
             self.srcdir, config.source_suffix, exclude_matchers=matchers))
-        md_docs = set(get_matching_docs(
+        self.md_docs = set(get_matching_docs(
             self.srcdir, '.md', exclude_matchers=matchers))
-        self.found_docs.update(md_docs)
+        self.found_docs.update(self.md_docs)
 
         # add catalog mo file dependency
         for docname in self.found_docs:
