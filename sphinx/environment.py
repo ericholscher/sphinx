@@ -95,19 +95,16 @@ class NoUri(Exception):
     pass
 
 
-
 class MarkdownPublisher(Publisher):
 
     def __init__(self, *args, **kwargs):
-        env = kwargs.pop('env')
         Publisher.__init__(self, *args, **kwargs)
- 
         # replace parser FORCELY
-        self.reader.parser = CommonMarkParser(env=env)
- 
+        self.reader.parser = CommonMarkParser()
+
     def publish(self):
         Publisher.publish(self)
- 
+
         # set names and ids attribute to section node
         from docutils import nodes
         for section in self.document.traverse(nodes.section):
@@ -465,9 +462,6 @@ class BuildEnvironment:
         )
         self.found_docs = set(get_matching_docs(
             self.srcdir, config.source_suffix, exclude_matchers=matchers))
-        self.md_docs = set(get_matching_docs(
-            self.srcdir, '.md', exclude_matchers=matchers))
-        self.found_docs.update(self.md_docs)
 
         # add catalog mo file dependency
         for docname in self.found_docs:
@@ -780,11 +774,10 @@ class BuildEnvironment:
 
         # publish manually
         src_path = self.doc2path(docname)
-        if src_path.endswith('.md'):
+        if src_path.split('.')[-1] in ['md', 'markdown']:
             pub = MarkdownPublisher(reader=SphinxStandaloneReader(),
-                            writer=SphinxDummyWriter(),
-                            destination_class=NullOutput,
-                            env=self)
+                                    writer=SphinxDummyWriter(),
+                                    destination_class=NullOutput)
         else:
             pub = Publisher(reader=SphinxStandaloneReader(),
                             writer=SphinxDummyWriter(),

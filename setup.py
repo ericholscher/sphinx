@@ -51,7 +51,7 @@ requires = [
     'Pygments>=2.0',
     'docutils>=0.11',
     'snowballstemmer>=1.1',
-    #'recommonmark',
+    'recommonmark>=0.0.1',
     'babel',
 ]
 extras_require = {
