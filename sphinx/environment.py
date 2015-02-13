@@ -425,7 +425,6 @@ class BuildEnvironment:
         else:
             return path.join(base, docname) + suffix
 
-
     def relfn2path(self, filename, docname=None):
         """Return paths to a file referenced from a document, relative to
         documentation root and absolute.
@@ -1987,15 +1986,3 @@ class BuildEnvironment:
                     continue
                 self.warn(docname, 'document isn\'t included in any toctree')
 
-    def node_from_directive(self, directive_string):
-        pub = Publisher(reader=SphinxStandaloneReader(),
-                        writer=SphinxDummyWriter(),
-                        destination_class=NullOutput)
-        pub.set_components(None, 'restructuredtext', None)
-        pub.process_programmatic_settings(None, self.settings, None)
-        source = StringInput(source=directive_string, encoding=self.config.source_encoding)
-        pub.source = source
-        pub.set_destination(None, None)
-        pub.publish()
-        doctree = pub.document
-        return doctree
